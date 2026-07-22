@@ -21,6 +21,7 @@
 
 #include "AetherDspWidget.h"
 #include "VoiceModeGate.h"   // isCwMode() — one CW-mode list, not thirteen
+#include "AetherDspDialog.h"
 #include "BandRecallSliceSelectionPolicy.h"
 #include "models/BandPlanManager.h"
 #include "DisplayStatusGate.h"       // #4261 adaptive-throttle echo gate
@@ -5843,13 +5844,47 @@ void MainWindow::wireVfoWidget(VfoWidget* w, SliceModel* s)
     // WFM is toggled from the spectrum overlay DAX menu (wired in the per-pan
     // setup beside daxIqChannelChanged), not the flag — no connect here. (#3853)
 
-    // AetherDSP button on the per-slice DSP tab — toggles the modeless
-    // m_dspDialog (press to open, press again to close) so it matches its
-    // sibling AetherVoice button instead of being a one-way launcher (#3877).
-    // The Settings menu action and the RX chain double-click keep pure open
-    // semantics by calling ensureAetherDspDialog() directly.
-    connect(w, &VfoWidget::aetherDspRequested, this, [this] {
-        toggleAetherDspDialog();
+    // AetherDSP button on the per-slice DSP tab — toggles the inline
+    // AetherDSP Settings panel at the bottom of the slice panel.  If this
+    // slice's panel is currently popped out into the floating dialog,
+    // close the dialog instead — its destroyed hook (ensureAetherDspDialog)
+    // docks the panel back inline.  The Settings menu action and the RX
+    // chain double-click keep pure dialog-open semantics by calling
+    // ensureAetherDspDialog() directly.
+    connect(w, &VfoWidget::aetherDspRequested, this, [this, w] {
+        if (m_dspDialog && m_dspDialog->isVisible() && m_dspPopoutVfo == w) {
+            m_dspDialog->close();  // destroyed hook re-opens the inline panel
+            return;
+        }
+        const bool open = !w->isAetherDspPanelOpen();
+        w->setAetherDspPanelOpen(open);
+        if (open) {
+            // Re-converge with the engine on every show — sibling
+            // AetherDspWidget instances (dialog / applet / strip) only
+            // hard-sync via syncFromEngine().
+            if (auto* adsp = qobject_cast<AetherDspWidget*>(w->aetherDspPanelWidget()))
+                adsp->syncFromEngine();
+        }
+    });
+
+    // First open of the inline panel: build a compact AetherDspWidget wired
+    // through the same parameter plumbing as the dialog / RX-DSP applet.
+    connect(w, &VfoWidget::aetherDspPanelShowRequested, this, [this, w] {
+        if (!m_audio) return;
+        auto* adsp = new AetherDspWidget(m_audio);
+        adsp->setCompactMode(true);
+        wireAetherDspWidget(adsp);
+        adsp->syncFromEngine();
+        w->setAetherDspPanelWidget(adsp);
+    });
+
+    // Inline panel header popout button — hide the inline panel and open
+    // the floating AetherDSP Settings window; closing the window docks the
+    // panel back inline (destroyed hook in ensureAetherDspDialog()).
+    connect(w, &VfoWidget::aetherDspPopoutRequested, this, [this, w] {
+        w->setAetherDspPanelOpen(false);
+        m_dspPopoutVfo = w;
+        ensureAetherDspDialog();
     });
 
     // Accent the ADSP launcher whenever any client-side NR module is active, so

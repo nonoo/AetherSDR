@@ -800,14 +800,11 @@ private:
     // failed (e.g. allocation failure).
     AetherDspDialog* ensureAetherDspDialog();
 
-    // Toggle helper for the AetherDSP Settings dialog: open it when hidden,
-    // close it when visible.  Gives the per-slice DSP-tab ADSP button the same
-    // press-to-open / press-again-to-close semantics as its sibling AetherVoice
-    // button (#3877).  close() deletes the WA_DeleteOnClose dialog and clears
-    // the QPointer, so the next press re-creates and re-wires via
-    // ensureAetherDspDialog()'s wasFresh path.  Only the DSP-tab button toggles;
-    // the menu action and chain/strip launchers keep pure open semantics.
-    void toggleAetherDspDialog();
+    // Slice panel that popped its inline AetherDSP panel out into the
+    // floating dialog (header popout button).  When the dialog closes, the
+    // inline panel on this slice re-opens ("docks back").  Null when the
+    // dialog was opened from the Settings menu / RX chain instead.
+    QPointer<VfoWidget> m_dspPopoutVfo;
 
     // Wire the txBandSettingsRequested, serialSettingsChanged (HAVE_SERIALPORT),
     // sliceLetterDisplayModeChanged, and QDialog::finished handlers on a freshly-

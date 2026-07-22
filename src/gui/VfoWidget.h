@@ -322,6 +322,13 @@ Q_SIGNALS:
     void recordToggled(bool on);
     void playToggled(bool on);
     void aetherDspRequested();     // user clicked the ADSP button on the DSP tab
+    // Inline AetherDSP panel needs its body widget — emitted on the first
+    // open so MainWindow can create + wire an AetherDspWidget and inject it
+    // via setAetherDspPanelWidget().
+    void aetherDspPanelShowRequested();
+    // User clicked the popout button on the inline panel's header — opens
+    // the floating AetherDSP Settings window.
+    void aetherDspPopoutRequested();
     void aetherVoiceRequested();   // user clicked the AetherVoice button on the DSP tab
     void splitToggled();
     void swapRequested();
@@ -618,6 +625,17 @@ public:
     // from the AudioEngine *EnabledChanged signals. (#3800)
     void setAetherDspActive(bool active);
 
+    // Inline AetherDSP Settings panel at the bottom of the slice panel.
+    // The DSP tab's ADSP button toggles it open/closed; the panel header
+    // (applet-style ContainerTitleBar) carries a popout button that opens
+    // the floating AetherDSP Settings window instead.  MainWindow lazily
+    // injects the wired AetherDspWidget body on the first open in response
+    // to aetherDspPanelShowRequested().
+    void setAetherDspPanelWidget(QWidget* w);
+    QWidget* aetherDspPanelWidget() const { return m_aetherDspPanelWidget; }
+    bool isAetherDspPanelOpen() const;
+    void setAetherDspPanelOpen(bool open);
+
     // Per-slice VFO marker display prefs, persisted by slice ID (#1526).
     // markerWidth: 0 = off, 1 = 1 px, 3 = 3 px.
     int  markerWidth() const { return m_markerWidth; }
@@ -656,9 +674,19 @@ private:
     QPushButton* m_anftBtn{nullptr};
     QPushButton* m_mnBtn{nullptr};
     QPushButton* m_apfBtn{nullptr};
-    QPushButton* m_aetherDspBtn{nullptr};    // launches AetherDSP Settings dialog
+    QPushButton* m_aetherDspBtn{nullptr};    // toggles the inline AetherDSP panel
     bool         m_aetherDspActive{false};   // any client NR module on (#3800)
     QPushButton* m_aetherVoiceBtn{nullptr};  // toggles Aetherial Audio Channel Strip
+
+    // Inline AetherDSP Settings panel (bottom of the slice panel):
+    // applet-style header (ContainerTitleBar with popout button) above a
+    // body host that MainWindow fills with a wired AetherDspWidget.
+    // Shown only while the DSP tab is the active tab (index below).
+    static constexpr int kDspTabIndex = 1;  // tab order: Audio, DSP, Mode, X/RIT, DAX
+    QWidget*     m_aetherDspPanel{nullptr};
+    class ContainerTitleBar* m_aetherDspTitleBar{nullptr};
+    QVBoxLayout* m_aetherDspPanelBodyLayout{nullptr};
+    QWidget*     m_aetherDspPanelWidget{nullptr};
 
     // Shared DSP-level row at the bottom of the DSP grid: one slider whose
     // target switches based on which leveled DSP the user most recently
