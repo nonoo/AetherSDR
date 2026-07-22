@@ -13,6 +13,7 @@
 #include "RxApplet.h"
 #include "SliceColorManager.h"
 #include "SliceLabel.h"
+#include "containers/ContainerTitleBar.h"
 #include "core/DigitalVoiceFeature.h"
 #include "core/KiwiSdrManager.h"
 #include "core/KiwiSdrProtocol.h"
@@ -1457,6 +1458,37 @@ void VfoWidget::buildUI()
     buildTabContent();
     root->addWidget(m_tabStack);
 
+    // ── Inline AetherDSP Settings panel (bottom of the slice panel) ────────
+    // Hidden until the DSP tab's ADSP button opens it.  Header mirrors the
+    // side-panel applet titlebars (ContainerTitleBar); its popout button
+    // opens the floating AetherDSP Settings window (aetherDspPopoutRequested).
+    // Body is injected lazily by MainWindow (setAetherDspPanelWidget).
+    {
+        m_aetherDspPanel = new QWidget(this);
+        m_aetherDspPanel->setObjectName("aetherDspInlinePanel");
+        auto* vb = new QVBoxLayout(m_aetherDspPanel);
+        vb->setContentsMargins(0, 2, 0, 0);
+        vb->setSpacing(0);
+
+        m_aetherDspTitleBar = new ContainerTitleBar(tr("AetherDSP Settings"),
+                                                    m_aetherDspPanel);
+        m_aetherDspTitleBar->setObjectName("aetherDspInlineTitleBar");
+        m_aetherDspTitleBar->setAccessibleName(tr("AetherDSP Settings panel header"));
+        m_aetherDspTitleBar->setCloseButtonVisible(false);
+        connect(m_aetherDspTitleBar, &ContainerTitleBar::floatToggleClicked,
+                this, &VfoWidget::aetherDspPopoutRequested);
+        vb->addWidget(m_aetherDspTitleBar);
+
+        auto* body = new QWidget(m_aetherDspPanel);
+        m_aetherDspPanelBodyLayout = new QVBoxLayout(body);
+        m_aetherDspPanelBodyLayout->setContentsMargins(0, 2, 0, 0);
+        m_aetherDspPanelBodyLayout->setSpacing(0);
+        vb->addWidget(body);
+
+        m_aetherDspPanel->hide();
+        root->addWidget(m_aetherDspPanel);
+    }
+
     // Accessible names for VoiceOver / screen reader support (#870, #3288)
     const QStringList tabA11yNames = {
         tr("Audio settings"),
@@ -1944,7 +1976,7 @@ void VfoWidget::buildTabContent()
         m_aetherDspBtn->setFixedHeight(26);
         m_aetherDspBtn->setStyleSheet(kDspToggle);
         m_aetherDspBtn->setAccessibleName("AetherDSP Settings");
-        m_aetherDspBtn->setToolTip("Open AetherDSP Settings (client-side NR2 / NR4 / DFNR / RN2 / BNR / MNR)");
+        m_aetherDspBtn->setToolTip("Show or hide the AetherDSP Settings panel (client-side NR2 / NR4 / DFNR / RN2 / BNR / MNR)");
         connect(m_aetherDspBtn, &QPushButton::clicked, this,
                 &VfoWidget::aetherDspRequested);
 
@@ -2901,6 +2933,12 @@ void VfoWidget::showTab(int index)
             setMeterMenuOpen(false);
         }
     }
+    // The inline AetherDSP panel belongs to the DSP tab: whenever the DSP
+    // tab stops being the active tab (toggled off or another tab opened),
+    // hide the panel too so it doesn't linger under unrelated content.
+    if (m_activeTab != kDspTabIndex && isAetherDspPanelOpen()) {
+        m_aetherDspPanel->hide();
+    }
     relayoutToCurrentContent();
 }
 
@@ -3078,6 +3116,12 @@ void VfoWidget::setCollapsed(bool collapsed)
                 btn->setChecked(false);
             }
             updateDspTabAccent();
+        }
+        // The inline AetherDSP panel belongs to the DSP tab, which the
+        // restore above just force-closed — hide the panel too so it
+        // doesn't reappear alone under the closed tabs.
+        if (m_aetherDspPanel) {
+            m_aetherDspPanel->hide();
         }
         // Restore external buttons to pre-collapse state and reposition them
         // based on the new expanded width (they were positioned for COLLAPSED_W)
@@ -3396,6 +3440,42 @@ void VfoWidget::setAetherDspActive(bool active)
     m_aetherDspBtn->setAccessibleName(active ? QStringLiteral("AetherDSP Settings (NR active)")
                                              : QStringLiteral("AetherDSP Settings"));
     updateDspTabAccent();
+}
+
+// ── Inline AetherDSP Settings panel ──────────────────────────────────────────
+
+void VfoWidget::setAetherDspPanelWidget(QWidget* w)
+{
+    if (m_aetherDspPanelWidget == w)
+        return;
+    if (m_aetherDspPanelWidget && m_aetherDspPanelBodyLayout)
+        m_aetherDspPanelBodyLayout->removeWidget(m_aetherDspPanelWidget);
+    m_aetherDspPanelWidget = w;
+    if (w && m_aetherDspPanelBodyLayout)
+        m_aetherDspPanelBodyLayout->addWidget(w);
+    if (isAetherDspPanelOpen())
+        relayoutToCurrentContent();
+}
+
+bool VfoWidget::isAetherDspPanelOpen() const
+{
+    return m_aetherDspPanel && !m_aetherDspPanel->isHidden();
+}
+
+void VfoWidget::setAetherDspPanelOpen(bool open)
+{
+    if (!m_aetherDspPanel)
+        return;
+    if (open && !m_aetherDspPanelWidget) {
+        // First open: ask MainWindow for a wired AetherDspWidget body.
+        emit aetherDspPanelShowRequested();
+        if (!m_aetherDspPanelWidget)
+            return;  // no engine available — nothing to show
+    }
+    m_aetherDspPanel->setVisible(open);
+    // The flag pins itself to sizeHint() (post-#3706 fixed height) — refit
+    // so the panel actually gets room instead of being clipped.
+    relayoutToCurrentContent();
 }
 
 // ── Per-slice VFO marker display prefs (#1526) ───────────────────────────────

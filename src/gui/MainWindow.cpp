@@ -3169,20 +3169,18 @@ AetherDspDialog* MainWindow::ensureAetherDspDialog()
     showOrRaisePersistent(m_dspDialog, m_audio);
     if (wasFresh && m_dspDialog) {
         if (auto* w = m_dspDialog->widget()) wireAetherDspWidget(w);
+        // Popped-out inline panel docks back: when the WA_DeleteOnClose
+        // dialog goes away, re-open the inline AetherDSP panel on the slice
+        // whose header popout button launched it (null when opened from the
+        // Settings menu / RX chain — those keep pure dialog semantics).
+        connect(m_dspDialog, &QObject::destroyed, this, [this] {
+            if (auto* vfo = m_dspPopoutVfo.data()) {
+                m_dspPopoutVfo.clear();
+                vfo->setAetherDspPanelOpen(true);
+            }
+        });
     }
     return m_dspDialog.data();
-}
-
-void MainWindow::toggleAetherDspDialog()
-{
-    // Sibling of toggleAetherialStrip(): the per-slice DSP-tab ADSP button is a
-    // toggle, not a one-way launcher (#3877).  When the dialog is already up,
-    // close() deletes it (WA_DeleteOnClose) and clears the QPointer; the next
-    // press re-creates and re-wires through ensureAetherDspDialog().
-    if (m_dspDialog && m_dspDialog->isVisible())
-        m_dspDialog->close();
-    else
-        ensureAetherDspDialog();
 }
 
 #ifdef HAVE_MQTT
