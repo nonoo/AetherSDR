@@ -3313,6 +3313,16 @@ AetherRxDialog* MainWindow::ensureAetherRxDialog()
     showOrRaisePersistent(m_rxDialog, m_audio);
     if (wasFresh && m_rxDialog) {
         if (auto* w = m_rxDialog->widget()) wireAetherDspWidget(w);
+        // Popped-out inline panel docks back: when the WA_DeleteOnClose
+        // dialog goes away, re-open the inline AetherDSP panel on the slice
+        // whose header popout button launched it (null when opened from the
+        // Settings menu / RX chain — those keep pure dialog semantics).
+        connect(m_rxDialog, &QObject::destroyed, this, [this] {
+            if (auto* vfo = m_dspPopoutVfo.data()) {
+                m_dspPopoutVfo.clear();
+                vfo->setAetherDspPanelOpen(true);
+            }
+        });
         // The EQ page's width buttons: turn a labelled width into the passband
         // that width means in this mode, through the same rule the VFO's filter
         // grid uses, and send it to the slice.
@@ -3339,19 +3349,6 @@ AetherRxDialog* MainWindow::ensureAetherRxDialog()
     }
     return m_rxDialog.data();
 }
-
-void MainWindow::toggleAetherRxDialog()
-{
-    // Sibling of toggleAetherialStrip(): the per-slice DSP-tab ADSP button is a
-    // toggle, not a one-way launcher (#3877).  When the dialog is already up,
-    // close() deletes it (WA_DeleteOnClose) and clears the QPointer; the next
-    // press re-creates and re-wires through ensureAetherRxDialog().
-    if (m_rxDialog && m_rxDialog->isVisible())
-        m_rxDialog->close();
-    else
-        ensureAetherRxDialog();
-}
-
 #ifdef HAVE_MQTT
 void MainWindow::showMqttSettingsDialog()
 {
