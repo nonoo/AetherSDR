@@ -62,6 +62,7 @@ public:
     // mute with no indication why — there is no radio-side audio path to fall
     // back to, unlike a Flex.
     void setPcAudioLocked(bool locked);
+    void setRecordWindowEnabled(bool on);
     void setPcAudioDevices(const QString& inputDevice, const QString& outputDevice);
     void setLineoutMuted(bool muted);
     void setHeadphoneMuted(bool muted);
@@ -132,6 +133,7 @@ public:
 
 signals:
     void pcAudioToggled(bool on);
+    void recordWindowToggled(bool on);
     void masterVolumeChanged(int pct);
     void headphoneVolumeChanged(int pct);
     void lineoutMuteChanged(bool muted);
@@ -174,6 +176,7 @@ private:
     void handleTitleDoubleClick(QMouseEvent* ev);
     void showFeatureRequestDialogImpl();
     void updatePcAudioToolTip();
+    void updateRecordStyle();
     void applyPcAudioStyle();
     void applyBarStyle();
     // Bar fill pre-composited over the window background, so the bar can be
@@ -200,6 +203,7 @@ private:
     QLabel*      m_experimentalRadioLabel{nullptr};
     QLabel*      m_otherTxLabel{nullptr};
     QPushButton* m_mfBtn{nullptr};
+    QPushButton* m_recordBtn{nullptr};
     QPushButton* m_pcBtn{nullptr};
     QPushButton* m_speakerBtn{nullptr};
     QPushButton* m_headphoneBtn{nullptr};
@@ -235,6 +239,8 @@ private:
     // Three consecutive misses is the alarm threshold, unchanged from the
     // standalone lamp: one missed discovery sweep is routine on a busy LAN.
     static constexpr int kHeartbeatAlarmThreshold = 3;
+    QGraphicsOpacityEffect* m_recordOpacity{nullptr};
+    QPropertyAnimation*     m_recordPulseAnim{nullptr}; // Pulsating opacity effect for recording
     int          m_missedBeats{0};
     bool         m_blinkEnabled{true};  // persisted via AppSettings "HeartbeatBlinkEnabled"
     bool         m_discovering{false};  // solid amber while waiting for connection
