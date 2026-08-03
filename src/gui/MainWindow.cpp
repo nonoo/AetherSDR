@@ -36,6 +36,7 @@
 #ifdef Q_OS_MACOS
 #include "mac/NativeWindowTitle.h"
 #endif
+#include "WindowVideoRecorder.h"
 #include "PanRecenterPolicy.h"
 #include "PanadapterApplet.h"
 #ifdef AETHER_ASR_ENABLED
@@ -1203,6 +1204,7 @@ MainWindow::MainWindow(QWidget* parent)
 
     // QSO audio recorder (#1297) — lives on main thread, audio feeds are thread-safe
     m_qsoRecorder = new QsoRecorder(this);
+
     // During playback, block live RX audio from entering the buffer
     connect(m_qsoRecorder, &QsoRecorder::muteRxRequested, this, [this](bool mute) {
         // Covers BOTH producers. The disconnect below is the Flex path and is
@@ -1997,6 +1999,10 @@ MainWindow::MainWindow(QWidget* parent)
         }
         syncTitleBarOutput();
     });
+
+    // Window video recorder (creation + all wiring) — MainWindow_Recording.cpp
+    wireWindowVideoRecorder();
+
     // Master volume — title bar slider routes through applyMasterVolume()
     // so the TCI `volume:N;` command (#1764) can hit the same code path
     // when tciServer() is created later in this constructor.
@@ -4151,6 +4157,13 @@ void MainWindow::closeEvent(QCloseEvent* event)
 {
     m_pendingDisplayWrites.flush();
     ShutdownTrace closeEventTrace("main_window.close_event");
+    // isSessionActive covers both live recording and stop-in-flight finalize.
+    // deferCloseForWindowRecorder() lives in MainWindow_Recording.cpp.
+    if (deferCloseForWindowRecorder()) {
+        event->ignore();
+        return;
+    }
+
 #ifdef Q_OS_MACOS
     // Shared Ulanzi access temporarily remaps only the dial's system key
     // events. Restore that mapping while the macOS HID event system and Qt
@@ -4502,6 +4515,9 @@ void MainWindow::closeEvent(QCloseEvent* event)
     }
 
     QMainWindow::closeEvent(event);
+    if (m_waitingForRecorderToStop) {
+        QCoreApplication::quit();
+    }
 }
 
 // keyPressEvent()/keyReleaseEvent() lives in MainWindow_Shortcuts.cpp (#3351 Phase 1c).
@@ -8923,6 +8939,9 @@ void MainWindow::setActiveSliceInternal(int sliceId, bool revealOffscreen)
     m_qsoRecorder->setSlice(s);
     // Radio-side recording is per slice, and AetherRX shows the active one.
     syncAetherRxRecordButtons();
+    if (m_windowVideoRecorder) {
+        m_windowVideoRecorder->setSlice(s);
+    }
 
     // Re-wire applet panel, overlay menu to the new active slice
     if (m_panStack) {
