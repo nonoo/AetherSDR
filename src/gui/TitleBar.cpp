@@ -299,6 +299,42 @@ TitleBar::TitleBar(QWidget* parent)
             m_txTimerLabel->setVisible(false);
     });
 
+    // Record toggle
+    m_recordBtn = new QPushButton("🎬 REC");
+    m_recordBtn->setCheckable(true);
+    m_recordBtn->setFixedHeight(22);
+    m_recordBtn->setFixedWidth(70);
+    m_recordBtn->setAccessibleName(tr("Record"));
+    m_recordBtn->setAccessibleDescription(tr("Toggle recording of the AetherSDR window"));
+    m_recordBtn->setToolTip(tr("Record the AetherSDR window to an MP4 video file"));
+
+    m_recordOpacity = new QGraphicsOpacityEffect(m_recordBtn);
+    m_recordOpacity->setOpacity(1.0);
+    m_recordBtn->setGraphicsEffect(m_recordOpacity);
+
+    m_recordPulseAnim = new QPropertyAnimation(m_recordOpacity, "opacity", m_recordBtn);
+    m_recordPulseAnim->setDuration(1200);
+    m_recordPulseAnim->setStartValue(1.0);
+    m_recordPulseAnim->setKeyValueAt(0.5, 0.4);
+    m_recordPulseAnim->setEndValue(1.0);
+    m_recordPulseAnim->setEasingCurve(QEasingCurve::InOutSine);
+    m_recordPulseAnim->setLoopCount(-1);
+
+    updateRecordStyle();
+
+    connect(m_recordBtn, &QPushButton::toggled, this, [this](bool on) {
+        updateRecordStyle();
+        emit recordWindowToggled(on);
+    });
+    m_hbox->addWidget(m_recordBtn);
+
+#if QT_VERSION < QT_VERSION_CHECK(6, 8, 0)
+    m_recordBtn->setVisible(false);
+    m_recordBtn->setEnabled(false);
+#else
+    m_hbox->addSpacing(6);
+#endif
+
     // PC Audio toggle
     m_pcBtn = new QPushButton("PC Audio");
     m_pcBtn->setObjectName(QStringLiteral("pcAudioBtn"));
@@ -872,6 +908,14 @@ void TitleBar::setPcAudioEnabled(bool on)
           "QPushButton:hover { background: #243848; }");
 }
 
+void TitleBar::setRecordWindowEnabled(bool on)
+{
+    if (!m_recordBtn) return;
+    QSignalBlocker b(m_recordBtn);
+    m_recordBtn->setChecked(on);
+    updateRecordStyle();
+}
+
 void TitleBar::setPcAudioDevices(const QString& inputDevice, const QString& outputDevice)
 {
     m_pcAudioInputDevice = inputDevice.trimmed();
@@ -1350,6 +1394,7 @@ void TitleBar::setMinimalMode(bool on)
     // Hide non-essential controls so status badges fit in the narrow strip.
     if (m_menuBar) m_menuBar->setVisible(!on);
     if (m_appNameLabel) m_appNameLabel->setVisible(!on);
+    if (m_recordBtn) m_recordBtn->setVisible(m_recordBtn->isEnabled() && (!on || m_recordBtn->isChecked()));
     m_pcBtn->setVisible(!on);
     m_speakerBtn->setVisible(!on);
     m_headphoneBtn->setVisible(!on);
@@ -1368,4 +1413,38 @@ void TitleBar::setMinimalMode(bool on)
     updateMaximizeIcon();
 }
 
+void TitleBar::updateRecordStyle()
+{
+    if (!m_recordBtn) {
+        return;
+    }
+    if (m_recordBtn->isChecked()) {
+        m_recordBtn->setVisible(true);
+        AetherSDR::ThemeManager::instance().applyStyleSheet(
+            m_recordBtn,
+            "QPushButton { background: {{color.button.danger.background.disabled}}; color: {{color.accent.danger}}; border: 1px solid {{color.button.danger.border.disabled}}; "
+            "border-radius: 3px; font-size: 10px; font-weight: bold; }"
+            "QPushButton:hover { background: {{color.button.danger.background.disabled}}; }");
+        if (m_recordPulseAnim && m_recordPulseAnim->state() != QAbstractAnimation::Running) {
+            m_recordPulseAnim->start();
+        }
+    } else {
+        if (m_minimalMode) {
+            m_recordBtn->setVisible(false);
+        }
+        if (m_recordPulseAnim) {
+            m_recordPulseAnim->stop();
+        }
+        if (m_recordOpacity) {
+            m_recordOpacity->setOpacity(1.0);
+        }
+        AetherSDR::ThemeManager::instance().applyStyleSheet(
+            m_recordBtn,
+            "QPushButton { background: {{color.background.1}}; color: {{color.text.label}}; border: 1px solid {{color.background.2}}; "
+            "border-radius: 3px; font-size: 10px; font-weight: bold; }"
+            "QPushButton:hover { background: {{color.background.2}}; }");
+    }
+}
+
 } // namespace AetherSDR
+

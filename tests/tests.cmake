@@ -1557,6 +1557,38 @@ target_include_directories(qso_recorder_pc_audio_guard_test PRIVATE
 target_link_libraries(qso_recorder_pc_audio_guard_test PRIVATE Qt6::Core Qt6::Multimedia)
 add_test(NAME qso_recorder_pc_audio_guard_test COMMAND qso_recorder_pc_audio_guard_test)
 
+# Unit test for WindowVideoRecorder
+add_executable(window_video_recorder_test
+    tests/window_video_recorder_test.cpp
+    src/gui/WindowVideoRecorder.cpp
+    ${AETHER_SETTINGS_SOURCES}
+    src/core/AudioDeviceNegotiator.cpp
+    src/core/AudioFormatNegotiator.cpp
+    src/core/LogManager.cpp
+    src/core/AsyncLogWriter.cpp
+    src/core/Resampler.cpp
+    src/models/SliceModel.cpp
+    src/core/DigitalVoiceModeRegistry.cpp
+)
+if(WIN32)
+    target_sources(window_video_recorder_test PRIVATE src/gui/recording/WmfVideoWriter.cpp)
+    target_link_libraries(window_video_recorder_test PRIVATE ${WMF_LIBRARIES} ole32)
+elseif(APPLE)
+    target_sources(window_video_recorder_test PRIVATE src/gui/recording/AvfVideoWriter.mm)
+    target_link_libraries(window_video_recorder_test PRIVATE "-framework Foundation" "-framework AVFoundation" "-framework CoreMedia" "-framework CoreVideo")
+endif()
+target_include_directories(window_video_recorder_test PRIVATE
+    src
+    ${CMAKE_SOURCE_DIR}/third_party/r8brain
+)
+target_link_libraries(window_video_recorder_test PRIVATE Qt6::Core Qt6::Widgets Qt6::Multimedia Qt6::Test)
+add_test(NAME window_video_recorder_test COMMAND window_video_recorder_test)
+# Headless CI has no display, and no MP4/H.264/AAC encoder is guaranteed —
+# the test returns 77 (skip) when Qt Multimedia cannot encode.
+set_tests_properties(window_video_recorder_test PROPERTIES
+    ENVIRONMENT "QT_QPA_PLATFORM=offscreen"
+    SKIP_RETURN_CODE 77)
+
 add_executable(profile_transfer_test
     tests/profile_transfer_test.cpp
 )
@@ -4217,6 +4249,7 @@ target_link_libraries(CAT_Flex_test PRIVATE Qt6::Core Qt6::Network)
 # directly (rather than linking aethercore) needs the vendored SQLite engine.
 # Conditional targets are guarded with if(TARGET ...).
 set(AETHER_SETTINGS_CONSUMERS
+    window_video_recorder_test
     slice_label_test
     ulanzi_mapping_migration_test
     theme_manager_test
