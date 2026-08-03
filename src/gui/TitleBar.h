@@ -48,6 +48,7 @@ public:
     // mute with no indication why — there is no radio-side audio path to fall
     // back to, unlike a Flex.
     void setPcAudioLocked(bool locked);
+    void setRecordWindowEnabled(bool on);
     void setPcAudioDevices(const QString& inputDevice, const QString& outputDevice);
     void setLineoutMuted(bool muted);
     void setHeadphoneMuted(bool muted);
@@ -92,6 +93,7 @@ public:
 
 signals:
     void pcAudioToggled(bool on);
+    void recordWindowToggled(bool on);
     void masterVolumeChanged(int pct);
     void headphoneVolumeChanged(int pct);
     void lineoutMuteChanged(bool muted);
@@ -122,12 +124,14 @@ private:
     void handleTitleDoubleClick(QMouseEvent* ev);
     void showFeatureRequestDialogImpl();
     void updatePcAudioToolTip();
+    void updateRecordStyle();
     QHBoxLayout* m_hbox{nullptr};
     QMenuBar*    m_menuBar{nullptr};
     QLabel*      m_appNameLabel{nullptr};
     QLabel*      m_experimentalRadioLabel{nullptr};
     QLabel*      m_otherTxLabel{nullptr};
     QPushButton* m_mfBtn{nullptr};
+    QPushButton* m_recordBtn{nullptr};
     QPushButton* m_pcBtn{nullptr};
     QPushButton* m_speakerBtn{nullptr};
     QPushButton* m_headphoneBtn{nullptr};
@@ -156,6 +160,8 @@ private:
     QLabel*      m_heartbeat{nullptr};
     QTimer*      m_heartbeatOffTimer{nullptr};   // 100ms green→grey
     QTimer*      m_heartbeatAlarmTimer{nullptr}; // 500ms red/grey blink
+    QGraphicsOpacityEffect* m_recordOpacity{nullptr};
+    QPropertyAnimation*     m_recordPulseAnim{nullptr}; // Pulsating opacity effect for recording
     int          m_missedBeats{0};
     bool         m_alarmRed{false};
     bool         m_blinkEnabled{true};  // persisted via AppSettings "HeartbeatBlinkEnabled"
