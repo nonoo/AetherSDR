@@ -7072,6 +7072,15 @@ void MainWindow::captureTxSliceSelection()
             m_radioModel.txOwnedByUs())) {
         return;
     }
+    int slicesWithLetter = 0;
+    for (auto* sl : slices) {
+        if (sl->hasLetterFromRadio()) {
+            ++slicesWithLetter;
+        }
+    }
+    if (!SliceSelectionRestorePolicy::lettersReadyForSelection(slices.size(), slicesWithLetter)) {
+        return;
+    }
     for (auto* sl : slices) {
         if (sl->isTxSlice()) {
             storeSliceSelectionLetter(QStringLiteral("txSliceLetter"), sl->letter());
