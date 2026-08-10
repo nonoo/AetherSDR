@@ -1311,6 +1311,14 @@ target_link_libraries(band_recall_selection_guard_test PRIVATE Qt6::Core)
 add_test(NAME band_recall_selection_guard_test
     COMMAND band_recall_selection_guard_test)
 
+add_executable(slice_selection_restore_policy_test
+    tests/slice_selection_restore_policy_test.cpp
+)
+target_include_directories(slice_selection_restore_policy_test PRIVATE src)
+target_link_libraries(slice_selection_restore_policy_test PRIVATE Qt6::Core)
+add_test(NAME slice_selection_restore_policy_test
+    COMMAND slice_selection_restore_policy_test)
+
 add_executable(declared_bands_test
     tests/declared_bands_test.cpp
     src/models/DeclaredBands.cpp
