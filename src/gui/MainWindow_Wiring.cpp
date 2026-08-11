@@ -6751,7 +6751,7 @@ bool MainWindow::storeSliceSelectionLetter(const QString& field, const QString& 
     if (!SliceSelectionRestorePolicy::scopeCanCarrySelection(scope)) {
         return false;
     }
-    QJsonObject doc = AppSettings::instance().radioFeature(
+    QJsonObject doc = AppSettings::instance().radioFeatureExact(
         m_radioModel.family(), scope, QStringLiteral("SliceSelection"));
     doc[field] = letter;
     return AppSettings::instance().setRadioFeature(
