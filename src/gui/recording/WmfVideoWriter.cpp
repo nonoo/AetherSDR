@@ -80,6 +80,9 @@ bool WmfVideoWriter::open(const QString& filePath, int width, int height, int fp
     if (SUCCEEDED(hr)) {
         hr = videoOutType->SetUINT32(MF_MT_INTERLACE_MODE, MFVideoInterlace_Progressive);
     }
+    if (SUCCEEDED(hr)) {
+        hr = videoOutType->SetUINT32(MF_MT_MPEG2_PROFILE, eAVEncH264VProfile_Main);
+    }
     if (FAILED(hr)) {
         return fail("video output media type setup", hr);
     }
