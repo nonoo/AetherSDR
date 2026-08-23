@@ -142,6 +142,76 @@ void setFFmpegLogLevel(int level)
         setLevel(level);
     }
 }
+
+QVideoFrame imageToYuv420pFrame(const QImage& img)
+{
+    const int width = img.width();
+    const int height = img.height();
+    if (width <= 0 || height <= 0) {
+        return {};
+    }
+
+    QVideoFrameFormat format(QSize(width, height), QVideoFrameFormat::Format_YUV420P);
+    QVideoFrame frame(format);
+    if (!frame.map(QVideoFrame::WriteOnly)) {
+        return {};
+    }
+
+    const QImage converted = (img.format() == QImage::Format_ARGB32 || img.format() == QImage::Format_RGB32)
+        ? img
+        : img.convertToFormat(QImage::Format_ARGB32);
+
+    uchar* yPlane = frame.bits(0);
+    const int yStride = frame.bytesPerLine(0);
+    uchar* uPlane = frame.bits(1);
+    const int uStride = frame.bytesPerLine(1);
+    uchar* vPlane = frame.bits(2);
+    const int vStride = frame.bytesPerLine(2);
+
+    for (int y = 0; y < height; ++y) {
+        const QRgb* srcLine = reinterpret_cast<const QRgb*>(converted.constScanLine(y));
+        uchar* yDst = yPlane + y * yStride;
+        uchar* uDst = uPlane + (y / 2) * uStride;
+        uchar* vDst = vPlane + (y / 2) * vStride;
+
+        if ((y & 1) == 0) {
+            const QRgb* nextSrcLine = (y + 1 < height)
+                ? reinterpret_cast<const QRgb*>(converted.constScanLine(y + 1))
+                : srcLine;
+
+            for (int x = 0; x < width; x += 2) {
+                QRgb p00 = srcLine[x];
+                QRgb p01 = (x + 1 < width) ? srcLine[x + 1] : p00;
+                QRgb p10 = nextSrcLine[x];
+                QRgb p11 = (x + 1 < width) ? nextSrcLine[x + 1] : p10;
+
+                int r00 = qRed(p00), g00 = qGreen(p00), b00 = qBlue(p00);
+                int r01 = qRed(p01), g01 = qGreen(p01), b01 = qBlue(p01);
+
+                yDst[x] = static_cast<uchar>(std::clamp(((66 * r00 + 129 * g00 + 25 * b00 + 128) >> 8) + 16, 16, 235));
+                if (x + 1 < width) {
+                    yDst[x + 1] = static_cast<uchar>(std::clamp(((66 * r01 + 129 * g01 + 25 * b01 + 128) >> 8) + 16, 16, 235));
+                }
+
+                int rAvg = (r00 + r01 + qRed(p10) + qRed(p11) + 2) >> 2;
+                int gAvg = (g00 + g01 + qGreen(p10) + qGreen(p11) + 2) >> 2;
+                int bAvg = (b00 + b01 + qBlue(p10) + qBlue(p11) + 2) >> 2;
+
+                uDst[x / 2] = static_cast<uchar>(std::clamp(((-38 * rAvg - 74 * gAvg + 112 * bAvg + 128) >> 8) + 128, 16, 240));
+                vDst[x / 2] = static_cast<uchar>(std::clamp(((112 * rAvg - 94 * gAvg - 18 * bAvg + 128) >> 8) + 128, 16, 240));
+            }
+        } else {
+            for (int x = 0; x < width; ++x) {
+                QRgb p = srcLine[x];
+                int r = qRed(p), g = qGreen(p), b = qBlue(p);
+                yDst[x] = static_cast<uchar>(std::clamp(((66 * r + 129 * g + 25 * b + 128) >> 8) + 16, 16, 235));
+            }
+        }
+    }
+
+    frame.unmap();
+    return frame;
+}
 }
 
 namespace AetherSDR {
@@ -693,8 +763,8 @@ void WindowVideoRecorder::captureFrame()
     }
 #endif
 
-    // Construct QVideoFrame directly from the scaled image
-    QVideoFrame frame(frameToEncode);
+    // Convert frame to standard YUV420P for universal mobile/Android hardware decoding compatibility
+    QVideoFrame frame = imageToYuv420pFrame(frameToEncode);
 
     if (frame.isValid()) {
         frame.setStartTime(ptsUs);
