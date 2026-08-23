@@ -13,6 +13,7 @@
 #  include <mfapi.h>
 #  include <mfidl.h>
 #  include <mfreadwrite.h>
+#  include <codecapi.h>
 #endif
 
 namespace AetherSDR {
