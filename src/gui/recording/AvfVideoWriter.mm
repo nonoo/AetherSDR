@@ -99,7 +99,8 @@ bool AvfVideoWriter::open(const QString& filePath, int width, int height, int fp
         AVVideoWidthKey: @(width),
         AVVideoHeightKey: @(height),
         AVVideoCompressionPropertiesKey: @{
-            AVVideoAverageBitRateKey: @(2000000) // 2 Mbps
+            AVVideoAverageBitRateKey: @(2000000), // 2 Mbps
+            AVVideoProfileLevelKey: AVVideoProfileLevelH264HighAutoLevel
         }
     };
     wrapper.videoInput = [AVAssetWriterInput assetWriterInputWithMediaType:AVMediaTypeVideo
