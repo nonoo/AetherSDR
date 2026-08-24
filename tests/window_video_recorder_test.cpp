@@ -121,9 +121,15 @@ int main(int argc, char** argv)
         EXPECT_TRUE(!startedSpy.isEmpty());
         EXPECT_TRUE(errorSpy.isEmpty());
 
-        // Let the capture timer produce ~2s of frames.
+        // Let the capture timer produce ~2s of frames while feeding RX audio (including hot multi-slice peaks).
         t.restart();
         while (t.elapsed() < 2000) {
+            QByteArray pcmAudio(480 * 2 * sizeof(float), 0);
+            float* samples = reinterpret_cast<float*>(pcmAudio.data());
+            for (int i = 0; i < 480 * 2; ++i) {
+                samples[i] = 1.5f * std::sin(static_cast<float>(i) * 0.1f); // Hot signal peaking at 1.5
+            }
+            rec.feedRxAudio(pcmAudio);
             app.processEvents(QEventLoop::AllEvents, 50);
         }
 
