@@ -30,6 +30,7 @@
 #include <QLibrary>
 #include <QRhiWidget>
 #include <algorithm>
+#include <cmath>
 #include <cstdint>
 #include <utility>
 
@@ -797,15 +798,32 @@ void WindowVideoRecorder::captureFrame()
 
 namespace {
 
+static inline qint16 softFloat32ToInt16(float sample)
+{
+    if (!std::isfinite(sample)) {
+        return 0;
+    }
+    constexpr float kThreshold = 0.85f;
+    constexpr float kRange = 1.0f - kThreshold;
+    const float absVal = std::abs(sample);
+    float out = sample;
+    if (absVal > kThreshold) {
+        const float over = absVal - kThreshold;
+        const float compressed = kThreshold + kRange * std::tanh(over / kRange);
+        out = std::copysign(compressed, sample);
+    }
+    return static_cast<qint16>(std::clamp(out * 32767.0f, -32768.0f, 32767.0f));
+}
+
 QByteArray float32ToInt16(const QByteArray& pcm)
 {
+    constexpr float kRecordGain = 0.5f; // -6 dB attenuation
     const int numFloats = pcm.size() / static_cast<int>(sizeof(float));
     QByteArray out(numFloats * static_cast<int>(sizeof(qint16)), Qt::Uninitialized);
     const float* src = reinterpret_cast<const float*>(pcm.constData());
     qint16* dst = reinterpret_cast<qint16*>(out.data());
     for (int i = 0; i < numFloats; ++i) {
-        float clamped = std::clamp(src[i], -1.0f, 1.0f);
-        dst[i] = static_cast<qint16>(clamped * 32767.0f);
+        dst[i] = softFloat32ToInt16(src[i] * kRecordGain);
     }
     return out;
 }
