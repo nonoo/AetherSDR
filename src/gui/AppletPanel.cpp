@@ -5,6 +5,7 @@
 #include "GuardedSlider.h"
 #include "ComboStyle.h"
 #include "RxApplet.h"
+#include "BandApplet.h"
 #include "SMeterWidget.h"
 #include "CrossNeedleMeterApplet.h"
 #include "CrossNeedleMeterSettings.h"
@@ -171,7 +172,7 @@ constexpr int kStackBottomMargin = 8;
 } // namespace
 
 const QStringList AppletPanel::kDefaultOrder = {
-    "PWR", "RX", "TUN", "AMP", "TX", "PHNE", "P/CW", "EQ", "WAVE", "TXDSP", "CAT", "DAX", "TCI", "IQ", "MTR", "PROF", "KSDR", "HLTH", "AG", "SS", "GHE", "CLOCK"
+    "PWR", "RX", "BAND", "TUN", "AMP", "TX", "PHNE", "P/CW", "EQ", "WAVE", "TXDSP", "CAT", "DAX", "TCI", "IQ", "MTR", "PROF", "KSDR", "HLTH", "AG", "SS", "GHE", "CLOCK"
 };
 
 // ── Drop-aware scroll area ──────────────────────────────────────────────────
@@ -751,6 +752,9 @@ AppletPanel::AppletPanel(QWidget* parent) : QWidget(parent)
 
     m_rxApplet = new RxApplet;
     m_appletOrder.append(makeEntry("RX", "RX Controls", m_rxApplet, true, m_drawer, m_drawerLayout));
+
+    m_bandApplet = new BandApplet;
+    m_appletOrder.append(makeEntry("BAND", "Band", m_bandApplet, false, m_drawer, m_drawerLayout, "BAND"));
 
     // Tuner / Amp entries use makeEntry like everything else;
     // MainWindow toggles tray-button visibility via setTunerVisible /
@@ -1346,6 +1350,7 @@ QList<AppletPanel::AppletCatalogEntry> AppletPanel::appletCatalog() const
     // a category keep panel order.
     static const QMap<QString, QString> kCategory = {
         {QStringLiteral("RX"),    QStringLiteral("Receive")},
+        {QStringLiteral("BAND"),  QStringLiteral("Receive")},
         {QStringLiteral("MPAN"),  QStringLiteral("Receive")},
         {QStringLiteral("KSDR"),  QStringLiteral("Receive")},
         {QStringLiteral("DEMO"),  QStringLiteral("Receive")},
@@ -1833,6 +1838,8 @@ void AppletPanel::setControlsLocked(bool locked)
 void AppletPanel::setSlice(SliceModel* slice)
 {
     m_rxApplet->setSlice(slice);
+    if (m_bandApplet)
+        m_bandApplet->setSlice(slice);
     if (m_aetherClockApplet)
         m_aetherClockApplet->setSlice(slice);
 
@@ -1993,7 +2000,7 @@ QStringList AppletPanel::defaultButtonOrder() const
     // until the matching device is detected.  updateHardwareAvailability()
     // auto-adds them when MainWindow reports the hardware as present,
     // and the user's explicit Hidden choice is respected from then on.
-    QStringList out = {"VU", "PWR", "RX", "TX", "P/CW"};
+    QStringList out = {"VU", "PWR", "RX", "BAND", "TX", "P/CW"};
     const QStringList rest = {
         "LCK", "PHNE", "EQ", "WAVE", "TXDSP",
         "CAT", "DAX", "TCI", "IQ", "MTR", "PROF", "SS", "MQTT"
