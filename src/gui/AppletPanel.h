@@ -26,6 +26,7 @@ namespace AetherSDR {
 
 class SliceModel;
 class RxApplet;
+class BandApplet;
 class SMeterWidget;
 class CrossNeedleMeterApplet;
 class CrossNeedleMeterWidget;
@@ -86,6 +87,7 @@ public:
     void updateSliceButtons(const QList<SliceModel*>& slices, int activeSliceId);
 
     RxApplet*     rxApplet()      { return m_rxApplet; }
+    BandApplet*   bandApplet()    { return m_bandApplet; }
     SMeterWidget* sMeterWidget()  { return m_sMeter; }
     CrossNeedleMeterWidget* crossNeedleMeterWidget() const;
     void setMeterTxValues(float forwardWatts, float swr);
@@ -389,6 +391,7 @@ private:
     QString          m_vuPeakDecayRate{QStringLiteral("Medium")};
     QString          m_vuFaceTheme{QStringLiteral("aether-default")};
     RxApplet*    m_rxApplet{nullptr};
+    BandApplet*  m_bandApplet{nullptr};
     TunerApplet* m_tunerApplet{nullptr};
     AmpApplet*   m_ampApplet{nullptr};
     DemoApplet*  m_demoApplet{nullptr};

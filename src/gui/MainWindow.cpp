@@ -57,6 +57,7 @@
 #include "DemoApplet.h"
 #include "containers/ContainerManager.h"
 #include "RxApplet.h"
+#include "BandApplet.h"
 #include "SMeterWidget.h"
 #include "TunerApplet.h"
 #include "TxApplet.h"
@@ -6141,6 +6142,17 @@ void MainWindow::onConnectionStateChanged(bool connected)
                 applyNotchCapabilities(applet->spectrumWidget());
                 applyRadioSideDspToPanDisplay(applet->spectrumWidget());
             }
+            if (m_appletPanel && m_appletPanel->bandApplet()) {
+                auto* bandApplet = m_appletPanel->bandApplet();
+                bandApplet->setRadioCapabilities(caps);
+                bandApplet->setDeclaredBands(declaredBands, declaredBandRanges);
+                QVector<BandApplet::XvtrBand> appletXvtrBands;
+                for (const auto& x : xvtrBands) {
+                    appletXvtrBands.append({x.name, x.rfFreqMhz, x.stackKey});
+                }
+                bandApplet->setXvtrBands(appletXvtrBands);
+                applyTuningRangeToBandApplet();
+            }
         };
         QTimer::singleShot(2000, this, refreshXvtr);
         connect(&m_radioModel, &RadioModel::infoChanged, this, refreshXvtr);
@@ -7136,6 +7148,14 @@ void MainWindow::applyTuningRangeToOverlayMenu(SpectrumOverlayMenu* menu) const
     menu->setTuningRangeMhz(caps.tuningMinHz / 1.0e6, caps.tuningMaxHz / 1.0e6);
 }
 
+void MainWindow::applyTuningRangeToBandApplet() const
+{
+    if (!m_appletPanel || !m_appletPanel->bandApplet())
+        return;
+    const RadioCapabilities caps = m_radioModel.backendCapabilities();
+    m_appletPanel->bandApplet()->setTuningRange(caps.tuningMinHz / 1.0e6, caps.tuningMaxHz / 1.0e6);
+}
+
 void MainWindow::applyNotchCapabilities(SpectrumWidget* sw) const
 {
     if (!sw)
@@ -7211,6 +7231,10 @@ void MainWindow::applyCapabilitiesToUi(bool connected, const RadioCapabilities& 
         m_appletPanel->phoneCwApplet()->setSpeechProcessorPresentation(
             connected ? caps.speechProcessorLabel : QStringLiteral("PROC"),
             connected ? caps.speechProcessorLevelMaximum : 2);
+        if (auto* band = m_appletPanel->bandApplet()) {
+            band->setRadioCapabilities(m_radioModel.capabilities());
+            applyTuningRangeToBandApplet();
+        }
         m_appletPanel->meterApplet()->setMainFanTelemetryState(
             connected, caps.hasMainFanTelemetry);
         m_appletPanel->setSelectableMicInputs(!connected || caps.hasSelectableMicInputs);
