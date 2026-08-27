@@ -37,6 +37,7 @@ public:
     QString letter()     const { return m_letter.isEmpty()
                                      ? QString(QChar('A' + m_id))
                                      : m_letter; }
+    bool    hasLetterFromRadio() const { return !m_letter.isEmpty(); }
     QString panId()      const { return m_panId; }       // e.g. "0x40000000"
     double  frequency()  const { return m_frequency; }   // MHz
     QString mode()       const { return m_mode; }
