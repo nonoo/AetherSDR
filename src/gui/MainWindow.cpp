@@ -1441,6 +1441,7 @@ MainWindow::MainWindow(QWidget* parent)
                 }
                 statusBar()->showMessage(title + QStringLiteral(" - ") + detail, 8000);
             });
+
     m_networkDiagnosticsHistory = new NetworkDiagnosticsHistory(&m_radioModel, m_audio, this);
     m_memoryHistory = std::make_unique<MemoryHistoryRing>();
     m_cpuHistory = std::make_unique<CpuHistoryRing>();

@@ -2441,6 +2441,7 @@ RadioModel::RadioModel(QObject* parent)
             QStringLiteral("local-ptt:%1:%2").arg(panId, message),
             panId);
     });
+
     // The TX passband reaches a host-modulating backend through the seam, not
     // through the Flex verb next to it. Operator intent only — see the signal's
     // note — so this cannot echo radio state back as a command.
