@@ -16,6 +16,7 @@
 namespace AetherSDR {
 class SliceModel;
 class INativeVideoWriter;
+class PcmFrame;
 }
 
 #if QT_VERSION >= QT_VERSION_CHECK(6, 8, 0)
@@ -47,6 +48,7 @@ public slots:
     void stopRecording();
 
     void feedRxAudio(const QByteArray& pcm);
+    void feedRxFrame(const AetherSDR::PcmFrame& frame);
     void feedTxAudio(const QByteArray& int16Stereo);
     void onMoxChanged(bool mox);
 
@@ -135,6 +137,7 @@ public slots:
     void stopRecording() {}
 
     void feedRxAudio(const QByteArray& /*pcm*/) {}
+    void feedRxFrame(const AetherSDR::PcmFrame& /*frame*/) {}
     void feedTxAudio(const QByteArray& /*int16Stereo*/) {}
     void onMoxChanged(bool /*mox*/) {}
 
