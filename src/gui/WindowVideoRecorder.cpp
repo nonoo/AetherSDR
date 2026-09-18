@@ -3,6 +3,7 @@
 #if QT_VERSION >= QT_VERSION_CHECK(6, 8, 0)
 
 #include "core/AppSettings.h"
+#include "core/PcmFrame.h"
 #include "models/SliceModel.h"
 
 #include <QDir>
@@ -846,6 +847,17 @@ void WindowVideoRecorder::feedRxAudio(const QByteArray& pcm)
     QByteArray converted = float32ToInt16(pcm);
     if (sendAudioData(converted)) {
         m_hasRealAudio = true;
+    }
+}
+
+void WindowVideoRecorder::feedRxFrame(const AetherSDR::PcmFrame& frame)
+{
+    if (!m_recording || m_transmitting) {
+        return;
+    }
+    const QByteArray pcm = frame.legacyStereo24();
+    if (!pcm.isEmpty()) {
+        feedRxAudio(pcm);
     }
 }
 
