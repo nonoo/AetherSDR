@@ -74,7 +74,7 @@ void MainWindow::wireWindowVideoRecorder()
     // teardownBackend() on every family swap, which would silently kill the tap
     // for the rest of the session. RadioModel outlives the swap.
     connect(&m_radioModel, &RadioModel::rxDemodAudioReady,
-            m_windowVideoRecorder, &WindowVideoRecorder::feedRxAudio);
+            m_windowVideoRecorder, &WindowVideoRecorder::feedRxFrame);
     connect(m_audio, &AudioEngine::txFinalMonitorPcmReady,
             m_windowVideoRecorder, &WindowVideoRecorder::feedTxAudio);
     connect(&m_radioModel.transmitModel(), &TransmitModel::moxChanged,
